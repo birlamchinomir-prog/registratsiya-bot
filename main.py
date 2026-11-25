@@ -24,10 +24,8 @@ load_dotenv()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN", "").strip()
 ADMIN_ID_RAW = os.getenv("ADMIN_ID", "8245940482").strip()
-try:
-    ADMIN_ID = int(ADMIN_ID_RAW)
-except ValueError:
-    ADMIN_ID = 0
+ADMIN_IDS = [int(x.strip()) for x in ADMIN_ID_RAW.split(",") if x.strip().isdigit()]
+ADMIN_ID = ADMIN_IDS[0] if ADMIN_IDS else 0
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -36,7 +34,7 @@ bot = Bot(token=BOT_TOKEN) if BOT_TOKEN and BOT_TOKEN != "YOUR_BOT_TOKEN_HERE" e
 dp = Dispatcher(storage=MemoryStorage())
 
 def is_admin(user_id: int) -> bool:
-    return user_id == ADMIN_ID
+    return user_id in ADMIN_IDS
 
 # --- UMUMIY / BEKOR QILISH HANDLERLARI ---
 @dp.message(F.text == "❌ Bekor qilish")
@@ -224,27 +222,28 @@ async def process_bio(message: types.Message, state: FSMContext):
     )
 
     # Adminga xabar va tugmalar yuborish
-    if ADMIN_ID and ADMIN_ID != user_id:
-        try:
-            admin_caption = (
-                f"🆕 <b>Yangi ariza kelib tushdi!</b>\n\n"
-                f"🆔 <b>ID:</b> <code>{user_id}</code>\n"
-                f"👤 <b>Foydalanuvchi:</b> {username}\n"
-                f"📛 <b>Ism Familiya:</b> {first_name} {last_name}\n"
-                f"🎂 <b>Yoshi:</b> {age}\n"
-                f"📱 <b>Tel:</b> {phone}\n"
-                f"🎬 <b>Videoga tushganmi:</b> {profession}\n"
-                f"📝 <b>Bio:</b> {bio_text}"
-            )
-            await message.bot.send_photo(
-                chat_id=ADMIN_ID,
-                photo=photo_id,
-                caption=admin_caption,
-                reply_markup=profile_decision_keyboard(user_id),
-                parse_mode="HTML"
-            )
-        except Exception as e:
-            logger.error(f"Adminga yuborishda xatolik: {e}")
+    for adm_id in ADMIN_IDS:
+        if adm_id and adm_id != user_id:
+            try:
+                admin_caption = (
+                    f"🆕 <b>Yangi ariza kelib tushdi!</b>\n\n"
+                    f"🆔 <b>ID:</b> <code>{user_id}</code>\n"
+                    f"👤 <b>Foydalanuvchi:</b> {username}\n"
+                    f"📛 <b>Ism Familiya:</b> {first_name} {last_name}\n"
+                    f"🎂 <b>Yoshi:</b> {age}\n"
+                    f"📱 <b>Tel:</b> {phone}\n"
+                    f"🎬 <b>Videoga tushganmi:</b> {profession}\n"
+                    f"📝 <b>Bio:</b> {bio_text}"
+                )
+                await message.bot.send_photo(
+                    chat_id=adm_id,
+                    photo=photo_id,
+                    caption=admin_caption,
+                    reply_markup=profile_decision_keyboard(user_id),
+                    parse_mode="HTML"
+                )
+            except Exception as e:
+                logger.error(f"Adminga yuborishda xatolik: {e}")
 
 # --- PROFILNI KO'RISH ---
 @dp.message(F.text == "👤 Mening profilim")
